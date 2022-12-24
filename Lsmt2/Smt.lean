@@ -1,5 +1,6 @@
 import Lsmt2.Solver
 import Lsmt2.Term
+import Lsmt2.Parser
 
 
 
@@ -101,6 +102,32 @@ namespace Smt
       Smt.writeArg sym typ true
       loop tail
 
+  protected partial def loadSexpr : Script mon String := do
+    loadSexprAux ""
+  where loadSexprAux (s : String) : Script mon String := do
+    let line ← Smt.readLine
+    let s := s ++ line
+    match Parser.sexpr line.iter with
+    | .success _ true =>
+      return s
+    | .success _ false =>
+      loadSexprAux s
+    | .error _ e =>
+      Error.msg e
+      |>.context' "parser-level error"
+      |> throw
+
+  protected def parse (p : Parsec α) : Script mon α := do
+    let sexpr ← Smt.loadSexpr
+    match p sexpr.iter with
+    | .success _ res =>
+      return res
+    | .error _ e =>
+      Error.msg e
+      |>.context' "parser-level error"
+      |> throw
+
+
 
   /-! ### Queries
   
@@ -116,6 +143,17 @@ namespace Smt
     | "sat" => pure true
     | "unsat" => pure false
     | _ => panic! s!"unexpected checksat answer '{line}'"
+
+
+
+  def getModel
+    [Parser.Sym σ] [Parser.Typ τ] [Parser.Term α]
+  : Script mon <| Parser.Model σ τ α :=
+    let rec getModel' := do
+      Smt.putLnFl "(get-model)"
+      Smt.parse Parser.getModel
+    getModel'.context "during get-model"
+
 
 
   /-! ### Commands

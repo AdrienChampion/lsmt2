@@ -38,6 +38,14 @@ structure Error where
   --- Context.
   ctx : List Error.Ctx
 
+def Error.io (e : IO.Error) : Error where
+  src := Error.Src.io e
+  ctx := []
+
+def Error.msg (e : String) : Error where
+  src := Error.Src.msg e
+  ctx := []
+
 def Error.pretty
   (error : Error)
 : String := Id.run do

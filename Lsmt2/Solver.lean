@@ -151,7 +151,7 @@ section Transformer
     pure := Script.pure
     bind := Script.bind
 
-  instance instMonadExceptScript : MonadExcept Error <| Script mon where
+  instance instMonadExceptErrorScript : MonadExcept Error <| Script mon where
     throw err :=
       Script.throw err
     tryCatch res errorAction :=
