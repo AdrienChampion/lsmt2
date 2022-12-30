@@ -4,6 +4,18 @@ import Lsmt2.Solver
 
 
 
+protected def Lean.Parsec.context
+  (msg : Unit → String)
+  (sub : Lean.Parsec α)
+: Lean.Parsec α :=
+  fun p => match sub p with
+    | .success i res => .success i res
+    | .error i err =>
+      let err := s! "{err}\n- [{i.remainingToString}]\n- {msg ()}"
+      .error i err
+
+
+
 namespace Lsmt2
 
 
@@ -91,6 +103,11 @@ namespace Parser
       else fail "expected identifier"
 
     #eval
+      let s := "n1 ".iter
+      match parse s with
+      | .success _ res => println! s!"res: '{res}'"
+      | .error _ e => println! s!"err: '{e}'"
+    #eval
       let s := "some~~ident!? something else".iter
       match parse s with
       | .success _ res => println! s!"res: '{res}'"
@@ -108,6 +125,10 @@ namespace Parser
   def wsAnd (thn : Parsec α) : Parsec α := do
     ws
     thn
+  def andWs (pre : Parsec α) : Parsec α := do
+    let res ← pre
+    ws
+    return res
 
 
 
@@ -137,23 +158,57 @@ namespace Parser
       return n
     else
       fail "expected natural number"
+  
+
+
+  def int : Parsec Int := do
+    let c? ← peek?
+    match c? with
+    | none =>
+      fail "expected integer, reached EOI"
+    | some '(' =>
+      skip
+      ws
+      let _ ← pchar '-'
+      ws
+      let i :=
+        match ← nat with
+        | 0 => Int.ofNat 0
+        | n + 1 => Int.negSucc n
+      ws
+      let _ ← pchar ')'
+      return i
+    | some _ =>
+      let n ← nat
+      return Int.ofNat n
+
+  def bool : Parsec Bool := do
+    let boolStr ←
+      pstring "true" <|> pstring "false"
+    notFollowedBy (
+      do
+        let c ← anyChar
+        return Ident.isUnquotedTailChar c
+    )
+    return boolStr = "true"
 
 
 
   partial def sexpr : Parsec Bool :=
-    sexprAux 0
-  where sexprAux (paren : Nat) : Parsec Bool := do
+    sexprAux "" 0
+  where sexprAux (acc: String) (paren : Nat) : Parsec Bool := do
     ws
     let c ← peek?
     skip
+    let acc := s! "{acc} {c}[{paren}]"
     match c with
     | '(' =>
-      sexprAux (paren + 1)
+      paren + 1 |> sexprAux acc
     | ')' =>
-      if let paren + 1 := paren then
-        sexprAux paren
-      else
-        fail s!"ill-formed s-expression"
+      match paren with
+      | 0 => fail s!"ill-formed s-expression: unbalanced parens\n{acc}"
+      | paren + 1 => sexprAux acc paren
+        
     | '|' =>
       let rec drain : Parsec PUnit := do
         let c ← peek?
@@ -163,9 +218,9 @@ namespace Parser
         | some _ => drain
         | none => return ()
       drain
-      sexprAux paren
+      sexprAux acc paren
     | some _ =>
-      sexprAux paren
+      sexprAux acc paren
     | none =>
       return paren = 0
 end Parser
@@ -196,11 +251,13 @@ namespace Parser
     let sym ← parseSym
     ws
     let typ ← parseTyp
+    ws
     let _ ← pchar ')'
     return (sym, typ)
 
   def ModelElm.parse
     [Sym σ]
+    [ToString σ]
     [Typ τ]
     [Term α]
   : Parsec <| ModelElm σ τ α := do
@@ -229,14 +286,13 @@ namespace Parser
 
   def Model.parse
     [Sym σ]
+    [ToString σ]
     [Typ τ]
     [Term α]
   : Parsec <| Model σ τ α := do
     let _ ← pchar '('
     ws
-    let _ ← pstring "model"
-    let model ← wsAnd ModelElm.parse |> many
-    ws
+    let model ← andWs ModelElm.parse |> many
     let _ ← pchar ')'
     return model
 
@@ -244,35 +300,42 @@ namespace Parser
 
   def getModel
     [Sym σ]
+    [ToString σ]
     [Typ τ]
     [Term α]
-  : Parsec <| Model σ τ α :=
-    Model.parse
+  : Parsec <| Model σ τ α := do
+    ws
+    let model ← Model.parse
+    ws
+    return model
 
 
 
   def getValuesElm
-    [Sym σ]
-    [Term α]
-  : Parsec <| σ × α := do
+    [Term σ₁]
+    [Term σ₂]
+  : Parsec <| σ₁ × σ₂ := do
     let _ ← pchar '('
     ws
-    let sym ← parseSym
+    let trm ← parseTerm
+      |>.context fun _ => "parsing `trm`"
     ws
     let val ← parseTerm
+      |>.context fun _ => "parsing `val`"
     ws
     let _ ← pchar ')'
-    return (sym, val)
+    return (trm, val)
 
-  abbrev Values (σ α : Type) :=
-    Array <| σ × α
+  abbrev Values (σ₁ σ₂ : Type) :=
+    Array <| σ₁ × σ₂
 
   def getValues
-    [Sym σ]
-    [Term α]
-  : Parsec <| Values σ α := do
+    [Term σ₁]
+    [Term σ₂]
+  : Parsec <| Values σ₁ σ₂ := do
     let _ ← pchar '('
-    let values ← wsAnd getValuesElm |> many
+    ws
+    let values ← andWs getValuesElm |> many
     let _ ← pchar ')'
     return values
 

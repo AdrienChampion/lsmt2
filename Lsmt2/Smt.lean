@@ -107,7 +107,7 @@ namespace Smt
   where loadSexprAux (s : String) : Script mon String := do
     let line ← Smt.readLine
     let s := s ++ line
-    match Parser.sexpr line.iter with
+    match Parser.sexpr s.iter with
     | .success _ true =>
       return s
     | .success _ false =>
@@ -119,6 +119,7 @@ namespace Smt
 
   protected def parse (p : Parsec α) : Script mon α := do
     let sexpr ← Smt.loadSexpr
+    Io.println s!"sexpr: `{sexpr}`"
     match p sexpr.iter with
     | .success _ res =>
       return res
@@ -147,12 +148,32 @@ namespace Smt
 
 
   def getModel
-    [Parser.Sym σ] [Parser.Typ τ] [Parser.Term α]
+    [Parser.Sym σ] [ToString σ] [Parser.Typ τ] [Parser.Term α]
   : Script mon <| Parser.Model σ τ α :=
-    let rec getModel' := do
+    getModel'.context "during get-model"
+  where
+    getModel' := do
       Smt.putLnFl "(get-model)"
       Smt.parse Parser.getModel
-    getModel'.context "during get-model"
+
+
+
+  def getValues
+    [Parser.Term σ₁] [Parser.Term σ₂]
+    (terms : List τ)
+    [ToSmt2 τ]
+  : Script mon <| Parser.Values σ₁ σ₂ :=
+    getValues'.context "during get-value"
+  where
+    getValues' : Script mon <| Parser.Values σ₁ σ₂ := do
+      Smt.put "(get-value ("
+      terms.foldlM
+        (fun _ term => do
+          Smt.put " "
+          Smt.writeSmt2 term)
+        ()
+      Smt.putLnFl "))"
+      Smt.parse Parser.getValues
 
 
 
