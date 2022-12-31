@@ -26,16 +26,6 @@ open Lean.Parsec
 
 
 namespace Parser
-  class Sym (α : Type) where
-    parseSym : Parsec α
-  class Typ (α : Type) where
-    parseTyp : Parsec α
-  class Term (α : Type) where
-    parseTerm : Parsec α
-
-  export Sym (parseSym)
-  export Typ (parseTyp)
-  export Term (parseTerm)
 
   structure Ident where
     ident : String
@@ -223,6 +213,21 @@ namespace Parser
       sexprAux acc paren
     | none =>
       return paren = 0
+
+
+
+  /-! ### Classes Users Must Implement -/
+
+  class Sym (α : Type) where
+    parseSym : Parsec α
+  class Typ (α : Type) where
+    parseTyp : Parsec α
+  class Term (α : Type) where
+    parseTerm : Parsec α
+
+  export Sym (parseSym)
+  export Typ (parseTyp)
+  export Term (parseTerm)
 end Parser
 
 

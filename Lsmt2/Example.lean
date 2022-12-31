@@ -129,9 +129,9 @@ namespace Op
     <|> 𝕂 Op.lt <$> pstring "<"
     <|> 𝕂 Op.ge <$> pstring ">="
     <|> 𝕂 Op.gt <$> pstring ">"
-    <|> 𝕂 Op.add <$> pstring "*"
+    <|> 𝕂 Op.add <$> pstring "+"
     <|> 𝕂 Op.add <$> pstring "-"
-    <|> 𝕂 Op.mul <$> pstring "+"
+    <|> 𝕂 Op.mul <$> pstring "*"
 end Op
 
 instance instToStringOp : ToString Op :=
@@ -155,6 +155,8 @@ namespace Term
     Term.cst ∘ Const.bool
 
   def add (l r : Term) : Term :=
+    app Op.add #[l, r]
+  def sub (l r : Term) : Term :=
     app Op.add #[l, r]
   def mul (l r : Term) : Term :=
     app Op.mul #[l, r]
