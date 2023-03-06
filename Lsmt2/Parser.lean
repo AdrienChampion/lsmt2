@@ -262,7 +262,6 @@ namespace Parser
 
   def ModelElm.parse
     [Sym σ]
-    [ToString σ]
     [Typ τ]
     [Term α]
   : Parsec <| ModelElm σ τ α := do
@@ -291,7 +290,6 @@ namespace Parser
 
   def Model.parse
     [Sym σ]
-    [ToString σ]
     [Typ τ]
     [Term α]
   : Parsec <| Model σ τ α := do
@@ -305,7 +303,6 @@ namespace Parser
 
   def getModel
     [Sym σ]
-    [ToString σ]
     [Typ τ]
     [Term α]
   : Parsec <| Model σ τ α := do

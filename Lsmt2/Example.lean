@@ -231,35 +231,34 @@ abbrev Values :=
 
 
 open Lsmt2.Smt in
-open Lsmt2.Io in
-def test : Lsmt2.ScriptU Id := do
+def test : Smt PUnit := do
   let n1 := Term.ident "n1"
   let n2 := Term.ident "n2"
 
-  declareConst n1 Typ.Int
-  declareConst n2 Typ.Int
+  Smt.declareConst n1 Typ.Int
+  Smt.declareConst n2 Typ.Int
 
   let constraint :=
     Term.le
       (Term.add n1 <| Term.nat 1)
       (Term.mul n2 <| Term.nat 2)
-  assert constraint
+  Smt.assert constraint
 
-  if ← checksat then
-    let model : Model ← getModel
+  if ← Smt.checksat then
+    let model : Model ← Smt.getModel
     model.foldlM
       (fun _ elm =>
-        Io.println s! "let {elm.sym} : {elm.typ} := {elm.val}")
+        IO.println s! "let {elm.sym} : {elm.typ} := {elm.val}")
       ()
     let query := ["n1", "n2", "(+ n1 n2)"]
-    let values : Values ← getValues query
+    let values : Values ← Smt.getValues query
     values.foldlM
       (fun _ (sym, val) => 
-        Io.println s! "let {sym} := {val}")
+        IO.println s! "let {sym} := {val}")
       ()
   else
-    Io.println "[unreachable] ain't sat"
+    IO.println "[unreachable] ain't sat"
     
 #eval do
   let solver ← Lsmt2.Solver.mkZ3
-  solver.runToIO test
+  solver.run' test
