@@ -10,6 +10,11 @@ namespace Lsmt2
 
 /-! # SMT-LIB 2 Commands -/
 namespace Smt.Script
+  variable
+    {μ : Type → Type}
+    [Monad μ]
+    [MonadLiftT IO μ]
+
   protected def put (s : String) : Smt PUnit := do
     (← get).stdin.putStr s |> liftM
   protected def putLn (s : String) : Smt PUnit := do
@@ -36,14 +41,16 @@ namespace Smt.Script
     let s ← get
     let _ ← w s.stdin
 
-  protected def writeSmt2 [ToSmt2 α] (a : α) : Smt PUnit := do
-    ToSmt2.write a |> Script.wexe
+  protected def writeSmt2 [ToSmt2 μ α] (a : α) : SmtT μ PUnit :=
+    fun state => do
+      let w ← ToSmt2.write a
+      Script.wexe w state
 
   protected def writeArg
-    [ToSmt2 Sym] (sym : Sym)
-    [ToSmt2 Typ] (typ : Typ)
+    [ToSmt2 μ Sym] (sym : Sym)
+    [ToSmt2 μ Typ] (typ : Typ)
     (sideWs : Bool := true)
-  : Smt PUnit := do
+  : SmtT μ PUnit := do
     let (opn, cls) :=
       if sideWs then (" (", ") ") else ("(", ")")
     Script.put opn
@@ -53,18 +60,14 @@ namespace Smt.Script
     Script.put cls
   
   protected def writeParenArgs
-    [ToSmt2 Sym] [ToSmt2 Typ]
+    [ToSmt2 μ Sym]
+    [ToSmt2 μ Typ]
     (args : List (Sym × Typ))
-  : Smt PUnit := do
+  : SmtT μ PUnit := do
     Script.put "("
-    loop args
-    Script.put ")"
-  where
-    loop : List (Sym × Typ) → Smt PUnit
-    | [] => pure ()
-    | (sym, typ) :: tail => do
+    for (sym, typ) in args do
       Script.writeArg sym typ true
-      loop tail
+    Script.put ")"
 
   protected partial def loadSexpr : Smt String := do
     loadSexprAux ""
@@ -115,8 +118,8 @@ namespace Smt.Script
   def getValues
     [Parser.Term σ₁] [Parser.Term σ₂]
     (terms : List τ)
-    [ToSmt2 τ]
-  : Smt $ Parser.Values σ₁ σ₂ := do
+    [ToSmt2 μ τ]
+  : SmtT μ $ Parser.Values σ₁ σ₂ := do
     Script.put "(get-value ("
     terms.foldlM
       (fun _ term => do
@@ -134,21 +137,21 @@ namespace Smt.Script
   -/
 
   def assert
-    [ToSmt2 α] (term : α)
+    [ToSmt2 μ α] (term : α)
     (flush : Bool := false)
-  : Smt PUnit := do
+  : SmtT μ PUnit := do
     Script.put "(assert\n  "
     Script.writeSmt2 term
     Script.putLn "\n)"
     Script.flushIf flush
 
   def declareFun
-    [ToSmt2 Sym] [ToSmt2 Srt]
+    [ToSmt2 μ Sym] [ToSmt2 μ Srt]
     (sym : Sym)
     (ins : List (Sym × Srt))
     (typ : Srt)
     (flush : Bool := false)
-  : Smt PUnit := do
+  : SmtT μ PUnit := do
     let nl := ins.length > 2
     Script.put "(declare-fun "
     Script.writeSmt2 sym
@@ -163,42 +166,30 @@ namespace Smt.Script
     Script.flushIf flush
 
   def declareConst
-    [ToSmt2 Sym] [ToSmt2 Srt]
+    [ToSmt2 μ Sym] [ToSmt2 μ Srt]
     (sym : Sym)
     (typ : Srt)
     (flush : Bool := false)
-  : Smt PUnit :=
+  : SmtT μ PUnit :=
     declareFun sym [] typ flush
 end Smt.Script
 
 
 
 namespace Smt
-
-  variable
-    {Mon : outParam (Type → Type)}
-    [Monad Mon]
-    [MonadLiftT Smt Mon]
-
   /-! ### Queries
   
   Result-producing SMT-LIB 2 commands.
   -/
 
-  def checksat : Mon Bool :=
-    Script.checksat |> liftM
+  def checksat :=
+    @Script.checksat
 
-  def getModel
-    [Parser.Sym σ] [Parser.Typ τ] [Parser.Term α]
-  : Mon $ Parser.Model σ τ α :=
-    Script.getModel |> liftM
+  def getModel :=
+    @Script.getModel
 
-  def getValues
-    [Parser.Term σ₁] [Parser.Term σ₂]
-    (terms : List τ)
-    [ToSmt2 τ]
-  : Smt $ Parser.Values σ₁ σ₂ :=
-    Script.getValues terms |> liftM
+  def getValues :=
+    @Script.getValues
 
 
 
@@ -207,26 +198,12 @@ namespace Smt
   SMT-LIB 2 commands producing no result.
   -/
 
-  def assert
-    [ToSmt2 α] (term : α)
-    (flush : Bool := false)
-  : Mon PUnit :=
-    Script.assert term flush |> liftM
+  def assert :=
+    @Script.assert
 
-  def declareFun
-    [ToSmt2 Sym] [ToSmt2 Srt]
-    (sym : Sym)
-    (ins : List (Sym × Srt))
-    (typ : Srt)
-    (flush : Bool := false)
-  : Mon PUnit :=
-    Script.declareFun sym ins typ flush |> liftM
+  def declareFun :=
+    @Script.declareFun
 
-  def declareConst
-    [ToSmt2 Sym] [ToSmt2 Srt]
-    (sym : Sym)
-    (typ : Srt)
-    (flush : Bool := false)
-  : Mon PUnit :=
-    Script.declareConst sym typ flush |> liftM
+  def declareConst :=
+    @Script.declareConst
 end Smt

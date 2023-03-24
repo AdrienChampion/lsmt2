@@ -26,8 +26,8 @@ instance instParserSymSymbol : Parser.Sym Symbol :=
   ⟨Symbol.parse⟩
 instance instToStringSymbol : ToString Symbol :=
   ⟨Symbol.toString⟩
-instance instToSmt2Symbol : ToSmt2 Symbol :=
-  ⟨Writer.pushStr ∘ Symbol.sym⟩
+instance instToSmt2Symbol : ToSmt2 IO Symbol :=
+  ⟨pure ∘ Writer.pushStr ∘ Symbol.sym⟩
 
 
 
@@ -40,8 +40,8 @@ namespace Typ
     | Int => "Int"
     | Boo => "Bool"
 
-  def toSmt2 : Typ → Writer :=
-    Writer.pushStr ∘ Typ.toString
+  def toSmt2 : Typ → IO Writer :=
+    pure ∘ Writer.pushStr ∘ Typ.toString
 
   def parse : Parsec Typ := do
     𝕂 Typ.Int <$> pstring "Int"
@@ -52,7 +52,7 @@ instance instParserTypTyp : Parser.Typ Typ :=
   ⟨Typ.parse⟩
 instance instToStringTyp : ToString Typ :=
   ⟨Typ.toString⟩
-instance instToSmt2Typ : ToSmt2 Typ :=
+instance instToSmt2Typ : ToSmt2 IO Typ :=
   ⟨Typ.toSmt2⟩
 
 
@@ -98,8 +98,8 @@ instance instParserTermConst : Parser.Term Const :=
   ⟨Const.parse⟩
 instance instToStringConst : ToString Const :=
   ⟨Const.toString⟩
-instance instToSmt2Const : ToSmt2 Const :=
-  ⟨Const.toSmt2⟩
+instance instToSmt2Const : ToSmt2 IO Const :=
+  ⟨pure ∘ Const.toSmt2⟩
 
 
 
@@ -217,8 +217,8 @@ end Term
 
 instance instToStringTerm : ToString Term :=
   ⟨Term.toString⟩
-instance instToSmt2Term : ToSmt2 Term :=
-  ⟨Term.toSmt2⟩
+instance instToSmt2Term : ToSmt2 IO Term :=
+  ⟨pure ∘ Term.toSmt2⟩
 instance instParserTermTerm : Parser.Term Term :=
   ⟨Term.parse⟩
 

@@ -52,19 +52,40 @@ end Solver
 
 
 
+abbrev SmtT (μ : Type → Type) [MonadLiftT IO μ] (α : Type) :=
+  StateT Solver μ α
+
 abbrev Smt (α : Type) :=
   StateT Solver IO α
+
+
+
+instance instMonadLiftIOSmtT
+  [Lift : MonadLiftT IO μ] [Monad μ]
+: MonadLift IO (SmtT μ) where
+  monadLift io state :=
+    Lift.monadLift io
+    >>= fun res => pure (res, state)
+
+instance instMonadLiftSmtSmtT
+  [MonadLiftT IO μ] [Monad μ]
+: MonadLift Smt (SmtT μ) where
+  monadLift smt state := do
+    let (a, state) ← smt state
+    return (a, state)
 
 
 
 namespace Solver
   variable
     (self : Solver)
-    (prog : Smt α)
+    [Monad μ]
+    [MonadLiftT IO μ]
+    (prog : SmtT μ α)
 
-  def run : IO (α × Solver) :=
+  def run : μ $ α × Solver :=
     prog self
 
-  def run' : IO α :=
+  def run' : μ α :=
     Prod.fst <$> prog self
 end Solver
