@@ -199,6 +199,8 @@ namespace Smt
   Result-producing SMT-LIB 2 commands.
   -/
 
+  def checksat' :=
+    @Script.checksat'
   def checksat :=
     @Script.checksat
 
