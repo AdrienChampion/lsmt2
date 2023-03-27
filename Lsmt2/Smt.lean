@@ -108,13 +108,21 @@ namespace Smt.Script
   Result-producing SMT-LIB 2 commands.
   -/
 
-  def checksat : Smt Bool := do
+  def checksat' : Smt $ Except String Bool := do
     Script.putLnFl "(check-sat)"
     let line ← Script.readLine
     match line.trim with
-    | "sat" => pure true
-    | "unsat" => pure false
-    | line => panic! s!"unexpected checksat answer '{line}'"
+    | "sat" =>
+      return .ok true
+    | "unsat" =>
+      return .ok false
+    | line =>
+      return .error s!"unexpected checksat answer '{line}'"
+  
+  def checksat : Smt Bool := do
+    match ← checksat' with
+    | .ok isSat => return isSat
+    | .error err => panic! err
 
 
 
