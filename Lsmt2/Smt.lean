@@ -68,6 +68,15 @@ namespace Smt.Script
     for (sym, typ) in args do
       Script.writeArg sym typ true
     Script.put ")"
+  
+  protected def writeParenDeclArgs
+    [ToSmt2 μ Typ]
+    (args : List Typ)
+  : SmtT μ PUnit := do
+    Script.put "("
+    for typ in args do
+      Script.writeSmt2 typ
+    Script.put ")"
 
   protected partial def loadSexpr : Smt String := do
     loadSexprAux ""
@@ -148,7 +157,7 @@ namespace Smt.Script
   def declareFun
     [ToSmt2 μ Sym] [ToSmt2 μ Srt]
     (sym : Sym)
-    (ins : List (Sym × Srt))
+    (ins : List Srt)
     (typ : Srt)
     (flush : Bool := false)
   : SmtT μ PUnit := do
@@ -157,7 +166,7 @@ namespace Smt.Script
     Script.writeSmt2 sym
     if nl then Script.put "\n "
     Script.put " "
-    Script.writeParenArgs ins
+    Script.writeParenDeclArgs ins
     if nl then Script.put "\n "
     Script.put " "
     Script.writeSmt2 typ
