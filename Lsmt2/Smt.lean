@@ -75,8 +75,9 @@ namespace Smt.Script
   : SmtT μ PUnit := do
     Script.put "("
     for typ in args do
+      Script.put " "
       Script.writeSmt2 typ
-    Script.put ")"
+    Script.put " )"
 
   protected partial def loadSexpr : Smt String := do
     loadSexprAux ""
